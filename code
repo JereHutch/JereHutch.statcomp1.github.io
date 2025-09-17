@@ -1,124 +1,68 @@
+import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import datetime
 
-# Sample data: you’d build this from your cleaned table
-data = [
-    {
-        "Software": "R",
-        "ARIMA": 1,
-        "GARCH": 1,
-        "Unit Root": 1,
-        "Cointegration": 1,
-        "VAR": 1,
-        "Multivar GARCH": 1,
-        "Latest Release Year": 2024,
-        "OS Count": 3,  # e.g. Windows, Linux, macOS
-        "Interface": "CLI & GUI",
-        "Languages": "C, Fortran, R"
-    },
-    {
-        "Software": "gretl",
-        "ARIMA": 1,
-        "GARCH": 1,
-        "Unit Root": 1,
-        "Cointegration": 1,
-        "VAR": 1,
-        "Multivar GARCH": 1,
-        "Latest Release Year": 2023,
-        "OS Count": 3,
-        "Interface": "CLI & GUI",
-        "Languages": "C"
-    },
-    {
-        "Software": "PSPP",
-        "ARIMA": 1,
-        "GARCH": 0,
-        "Unit Root": 0,
-        "Cointegration": 0,
-        "VAR": 0,
-        "Multivar GARCH": 0,
-        "Latest Release Year": 2022,
-        "OS Count": 3,
-        "Interface": "CLI & GUI",
-        "Languages": "C"
-    },
-    {
-        "Software": "JMulTi",
-        "ARIMA": 1,
-        "GARCH": 0,
-        "Unit Root": 0,
-        "Cointegration": 0,
-        "VAR": 1,
-        "Multivar GARCH": 0,
-        "Latest Release Year": 2021,
-        "OS Count": 2,
-        "Interface": "GUI",
-        "Languages": "Java"
-    },
-    {
-        "Software": "RKWard",
-        "ARIMA": 1,
-        "GARCH": 0,
-        "Unit Root": 0,
-        "Cointegration": 0,
-        "VAR": 1,
-        "Multivar GARCH": 0,
-        "Latest Release Year": 2022,
-        "OS Count": 3,
-        "Interface": "GUI & CLI",
-        "Languages": "C++, ECMAScript"
-    }
-]
+st.set_page_config(page_title="GPL Statistical Packages Comparison", layout="wide")
 
-df = pd.DataFrame(data)
+st.title("GPL-Licensed Statistical Packages: General And Time Series Features")
 
-# Heatmap for the time series features
+# Load data
+df = pd.read_csv("data.csv")
+
 features = ["ARIMA", "GARCH", "Unit Root", "Cointegration", "VAR", "Multivar GARCH"]
+
+# Heatmap
 heatmap_df = df.set_index("Software")[features]
 
-# Convert 1/0 to labels and colors
 heatmap_labels = heatmap_df.replace({1: "Yes", 0: "No"})
-heatmap_colors = heatmap_df.replace({1: True, 0: False})
 
 fig_heat = go.Figure(data=go.Heatmap(
-    z = heatmap_df.values,
-    x = features,
-    y = heatmap_df.index,
-    colorscale = ['lightgray','green'],
-    zmin = 0,
-    zmax = 1,
+    z=heatmap_df.values,
+    x=features,
+    y=heatmap_df.index,
+    colorscale=['lightgray','green'],
+    zmin=0, zmax=1,
     showscale=False,
-    hoverinfo="text",
-    text = heatmap_labels.values
+    text=heatmap_labels.values,
+    hoverinfo="text"
 ))
-fig_heat.update_layout(title="Time Series Feature Support by GPL-Licensed Software",
-                       xaxis_title="Feature",
-                       yaxis_title="Software")
+fig_heat.update_layout(title="Time Series Feature Support")
 
-# Bar chart: how many features supported
+# Bar chart
 df["Feature Count"] = df[features].sum(axis=1)
 fig_bar = px.bar(df, x="Software", y="Feature Count",
-                 title="Number of Time Series Features Supported")
+                 title="Number of Time Series Features Supported",
+                 color="Software")
 
-# Maybe a scatter: Feature Count vs Release Recency
-import datetime
+# Scatter
 current_year = datetime.datetime.now().year
 df["Years Since Release"] = current_year - df["Latest Release Year"]
-fig_scatter = px.scatter(df, x="Feature Count", y="Years Since Release",
-                         size="OS Count", color="Interface",
-                         hover_data=["Languages"],
-                         title="Feature‐Count vs Release Recency (GPL Software)")
 
-# And a table of general info:
+fig_scatter = px.scatter(
+    df, x="Feature Count", y="Years Since Release",
+    size="OS Count", color="Interface",
+    hover_data=["Languages"],
+    title="Features vs. Release Recency"
+)
+
+# General Info Table
 table_fig = go.Figure(data=[go.Table(
     header=dict(values=["Software", "Latest Release Year", "OS Count", "Interface", "Languages"]),
     cells=dict(values=[df.Software, df["Latest Release Year"], df["OS Count"], df.Interface, df.Languages])
 )])
 table_fig.update_layout(title="General Information Summary")
 
-# To display or save snapshots
-fig_heat.show()
-fig_bar.show()
-fig_scatter.show()
-table_fig.show()
+# Layout in Streamlit
+st.subheader("1. Heatmap of Time Series Support")
+st.plotly_chart(fig_heat, use_container_width=True)
+
+st.subheader("2. Features Count per Software")
+st.plotly_chart(fig_bar, use_container_width=True)
+
+st.subheader("3. Features vs Release Recency")
+st.plotly_chart(fig_scatter, use_container_width=True)
+
+st.subheader("4. General Information Table")
+st.plotly_chart(table_fig, use_container_width=True)
